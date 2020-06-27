@@ -8,6 +8,7 @@ var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
 
 var app = express();
+const jwt = require('jsonwebtoken');
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
@@ -19,8 +20,50 @@ app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
-app.use('/', indexRouter);
-app.use('/users', usersRouter);
+app.post('/api/login', (req, res) => {
+  const user = {id: 3};
+  const token = jwt.sign({user}, 'my_secret_key');
+
+  res.json({
+    token
+  });
+});
+
+app.get('/api/protected', ensureToken, (req, res) => {
+  jwt.verify(req.token, 'my_secret_key', (err, data) => {
+    if(err){
+      res.sendStatus(403);
+    }else{
+      res.json({
+        text: 'protected',
+        data
+      });
+    }
+  })
+});
+
+// middleware para vereificar token para las peticiones
+function ensureToken(req, res, next){
+  const bearerHeader = req.headers['authorization'];
+  console.log(bearerHeader);
+  
+  if(typeof bearerHeader !== 'undefined'){
+    const bearer = bearerHeader.split(" ");
+    const bearerToken = bearer[1];
+    req.token = bearerToken;
+    next();
+  }else{
+    res.sendStatus(403);
+  }
+}
+
+app.get('/', (req, res) => {
+  res.json({
+    text: 'api works'
+  })
+});
+//app.use('/', indexRouter);
+//app.use('/users', usersRouter);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
